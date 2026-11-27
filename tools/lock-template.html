@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#F6F1FE">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>🔒 푸루무스스튜디오 오피스맵</title>
+<!-- 푸루무스스튜디오 오피스맵 · 잠금 페이지 · made by 우이 (tools/lock.mjs 로 생성)
+     내용은 PBKDF2-SHA256(150000회) + AES-256-GCM 으로 암호화되어 있습니다.
+     비밀번호 없이는 평문이 이 파일 안에 존재하지 않습니다. -->
+<style>
+  :root{
+    --lilac:#7C5CFF; --lilac-deep:#5B3FD6; --lilac-soft:#EDE6FF; --lilac-line:#D9CCFF;
+    --cream:#FBF3E7; --paper:#FFFDF8; --ink:#3A2E26; --ink2:#6E5C4E; --ink3:#A18B76;
+    --font:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans CJK KR","Noto Sans KR",system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;min-height:100%}
+  body{
+    font-family:var(--font);color:var(--ink);
+    min-height:100vh;min-height:100dvh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:24px 18px calc(18px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 90% at 12% 0%, #F1E9FF 0%, rgba(241,233,255,0) 60%),
+      radial-gradient(110% 80% at 92% 8%, #FFEFF6 0%, rgba(255,239,246,0) 55%),
+      radial-gradient(120% 90% at 50% 108%, #FFF3E2 0%, rgba(255,243,226,0) 62%),
+      var(--cream);
+    -webkit-font-smoothing:antialiased;
+  }
+  /* 은은한 픽셀 격자 — 오피스맵 분위기 */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:linear-gradient(rgba(124,92,255,.05) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(124,92,255,.05) 1px,transparent 1px);
+    background-size:26px 26px;
+    -webkit-mask-image:radial-gradient(80% 70% at 50% 40%, #000 0%, transparent 78%);
+            mask-image:radial-gradient(80% 70% at 50% 40%, #000 0%, transparent 78%);
+    z-index:-1;
+  }
+  .wrap{position:relative;z-index:1;width:100%;max-width:392px;margin:auto}
+  .card{
+    background:linear-gradient(180deg,#FFFEFB 0%,var(--paper) 100%);
+    border:1.5px solid var(--lilac-line);
+    border-radius:26px;
+    padding:26px 22px 20px;
+    box-shadow:0 2px 0 rgba(91,63,214,.05), 0 18px 40px -12px rgba(91,63,214,.22), 0 8px 18px -10px rgba(90,64,38,.18);
+    text-align:center;
+    animation:rise .5s cubic-bezier(.22,1.1,.36,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+  .lockicon{
+    width:62px;height:62px;margin:2px auto 14px;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;font-size:30px;line-height:1;
+    background:linear-gradient(160deg,#F3ECFF 0%,#E7DCFF 100%);
+    border:1.5px solid var(--lilac-line);
+    box-shadow:inset 0 -3px 0 rgba(124,92,255,.10), 0 6px 14px -8px rgba(124,92,255,.5);
+  }
+  h1{font-size:19px;line-height:1.35;margin:0 0 6px;letter-spacing:-.02em;font-weight:800;color:#2F2430}
+  .sub{margin:0 0 18px;font-size:13px;line-height:1.5;color:var(--ink2)}
+  .sub b{color:var(--lilac-deep);font-weight:700}
+  form{margin:0}
+  .field{position:relative;margin-bottom:10px}
+  label.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  input#pw{
+    width:100%;height:52px;padding:0 46px 0 16px;
+    font-family:var(--font);font-size:17px;letter-spacing:.02em;color:var(--ink);
+    background:#FFFDFA;border:1.5px solid #E8DCC6;border-radius:15px;outline:none;
+    transition:border-color .16s, box-shadow .16s, background .16s;
+  }
+  input#pw::placeholder{color:#BCAA96;letter-spacing:0;font-size:15px}
+  input#pw:focus{border-color:var(--lilac);box-shadow:0 0 0 4px rgba(124,92,255,.14);background:#fff}
+  .eye{
+    position:absolute;right:6px;top:6px;width:40px;height:40px;border:0;background:transparent;
+    border-radius:11px;color:var(--ink3);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .eye:active{background:#F5EFFC}
+  button.go{
+    width:100%;height:52px;border:0;border-radius:15px;cursor:pointer;
+    font-family:var(--font);font-size:16px;font-weight:800;letter-spacing:-.01em;color:#fff;
+    background:linear-gradient(180deg,#8C6EFF 0%,var(--lilac) 55%,var(--lilac-deep) 100%);
+    box-shadow:0 3px 0 #4B32B8, 0 12px 22px -10px rgba(92,63,214,.75);
+    transition:transform .08s, box-shadow .08s, filter .16s;
+  }
+  button.go:active{transform:translateY(2px);box-shadow:0 1px 0 #4B32B8, 0 6px 12px -8px rgba(92,63,214,.7)}
+  button.go[disabled]{filter:saturate(.6) brightness(.98);cursor:progress}
+  .msg{
+    min-height:20px;margin:12px 0 0;font-size:13px;line-height:1.45;font-weight:600;
+    color:#C2410C;opacity:0;transition:opacity .15s;
+  }
+  .msg.on{opacity:1}
+  .msg.busy{color:var(--lilac-deep)}
+  .hint{margin:14px 0 0;font-size:11.5px;line-height:1.5;color:var(--ink3)}
+  .hint .dot{color:var(--lilac-line);margin:0 5px}
+  /* 오입력 흔들림 */
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    12%{transform:translateX(-9px)} 26%{transform:translateX(8px)}
+    40%{transform:translateX(-6px)} 54%{transform:translateX(5px)}
+    68%{transform:translateX(-3px)} 82%{transform:translateX(2px)}
+  }
+  .shake{animation:shake .46s cubic-bezier(.36,.07,.19,.97) both}
+  .shake input#pw{border-color:#F0A98B;box-shadow:0 0 0 4px rgba(240,140,100,.14)}
+  .out{animation:out .34s ease both}
+  @keyframes out{to{opacity:0;transform:translateY(-6px) scale(.99)}}
+  footer{
+    position:relative;z-index:1;margin-top:18px;text-align:center;
+    font-size:11px;letter-spacing:.04em;color:#B7A492;
+  }
+  footer b{color:var(--lilac);font-weight:800;letter-spacing:0}
+  @media (max-width:400px){
+    body{padding:18px 14px calc(14px + env(safe-area-inset-bottom))}
+    .card{border-radius:22px;padding:22px 17px 17px}
+    .lockicon{width:56px;height:56px;font-size:27px;margin-bottom:12px}
+    h1{font-size:17.5px}
+    .sub{font-size:12.5px;margin-bottom:16px}
+    input#pw,button.go{height:50px}
+    input#pw{font-size:16px}
+  }
+  @media (min-width:640px){
+    .wrap{max-width:404px}
+    .card{padding:30px 28px 24px;border-radius:28px}
+    h1{font-size:21px}
+    .sub{font-size:13.5px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card{animation:none}
+    .shake{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="card">
+    <div class="lockicon" aria-hidden="true">🔒</div>
+    <h1>푸루무스스튜디오 오피스맵</h1>
+    <p class="sub">비밀번호를 넣으면 <b>사무실 문</b>이 열려요</p>
+    <form id="form" autocomplete="off" novalidate>
+      <div class="field">
+        <label class="sr" for="pw">비밀번호</label>
+        <input id="pw" type="password" name="pw" inputmode="text"
+               placeholder="비밀번호를 입력하세요" autocomplete="off"
+               autocapitalize="none" autocorrect="off" spellcheck="false"
+               enterkeyhint="go" aria-describedby="msg">
+        <button class="eye" id="eye" type="button" aria-label="비밀번호 보기" tabindex="-1">👁</button>
+      </div>
+      <button class="go" id="go" type="submit">들어가기</button>
+    </form>
+    <p class="msg" id="msg" role="status" aria-live="polite"></p>
+    <p class="hint">비밀번호를 잊으시면 <b style="color:#8A7460">우이</b>에게 물어보세요</p>
+  </div>
+  <footer>made by <b>우이</b></footer>
+</div>
+<script id="payload" type="application/octet-stream">__PAYLOAD__</script>
+<script>
+(function(){
+  "use strict";
+  var B64 = (document.getElementById("payload").textContent || "").replace(/\s+/g, "");
+  var SALT = new Uint8Array([__SALT__]);   // Uint8Array
+  var IV   = new Uint8Array([__IV__]);     // Uint8Array (12)
+  var ITER = 150000;
+  var card = document.getElementById("card");
+  var form = document.getElementById("form");
+  var pw   = document.getElementById("pw");
+  var go   = document.getElementById("go");
+  var msg  = document.getElementById("msg");
+  var eye  = document.getElementById("eye");
+  var fails = 0, busy = false;
+
+  function b64bytes(s){
+    var bin = atob(s), n = bin.length, a = new Uint8Array(n);
+    for(var i=0;i<n;i++) a[i] = bin.charCodeAt(i);
+    return a;
+  }
+  function say(t, kind){
+    msg.textContent = t || "";
+    msg.className = "msg" + (t ? " on" : "") + (kind === "busy" ? " busy" : "");
+  }
+  function shake(t){
+    say(t);
+    card.classList.remove("shake");
+    void card.offsetWidth;
+    card.classList.add("shake");
+    if (window.navigator.vibrate) { try { window.navigator.vibrate(28); } catch(e){} }
+  }
+  card.addEventListener("animationend", function(e){
+    if (e.animationName === "shake") card.classList.remove("shake");
+  });
+  eye.addEventListener("click", function(){
+    var show = pw.type === "password";
+    pw.type = show ? "text" : "password";
+    eye.textContent = show ? "🙈" : "👁";
+    eye.setAttribute("aria-label", show ? "비밀번호 가리기" : "비밀번호 보기");
+    pw.focus();
+  });
+
+  function derive(password){
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey("raw", enc.encode(password.normalize("NFKC")), "PBKDF2", false, ["deriveKey"])
+      .then(function(base){
+        return crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: SALT, iterations: ITER, hash: "SHA-256" },
+          base,
+          { name: "AES-GCM", length: 256 },
+          false,
+          ["decrypt"]
+        );
+      });
+  }
+
+  function unlock(){
+    var value = pw.value;
+    if (busy) return;
+    if (!value) { shake("비밀번호를 입력해 주세요"); pw.focus(); return; }
+    if (!(window.crypto && crypto.subtle)) {
+      say("이 브라우저에서는 잠금을 열 수 없어요. https 주소로 다시 열어 주세요.");
+      return;
+    }
+    busy = true; go.disabled = true; go.textContent = "여는 중…"; say("");
+    setTimeout(function(){
+      var KEY;
+      derive(value).then(function(key){
+        KEY = key;
+        return crypto.subtle.decrypt({ name: "AES-GCM", iv: IV }, key, b64bytes(B64));
+      }).then(function(buf){
+        var html = new TextDecoder("utf-8").decode(buf);
+        // 우이가 6시간마다 갱신하는 데이터(data.enc)도 같은 비밀번호로 풀어서 넘겨줘요. 실패하면 화면만 열어요.
+        return fetch("data.enc?t=" + Date.now(), { cache: "no-store" })
+          .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+          .then(function(d){ return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64bytes(d.iv) }, KEY, b64bytes(d.ct)); })
+          .then(function(db){
+            var json = new TextDecoder("utf-8").decode(db).replace(/</g, "\\u003c");
+            var tag = "<script>window.FURUMOO_DATA=" + json + ";<\/script>";
+            return /<head>/i.test(html) ? html.replace(/<head>/i, function(h){ return h + tag; }) : tag + html;
+          })
+          .catch(function(){ return html; });
+      }).then(function(html){
+        say("열렸어요!", "busy");
+        card.classList.add("out");
+        setTimeout(function(){
+          try {
+            document.open();
+            document.write(html);
+            document.close();
+          } catch (err) {
+            say("여는 중 문제가 생겼어요. 새로고침 후 다시 시도해 주세요.");
+            busy = false; go.disabled = false; go.textContent = "들어가기";
+          }
+        }, 300);
+      }).catch(function(){
+        fails++;
+        busy = false; go.disabled = false; go.textContent = "들어가기";
+        pw.select();
+        var wait = fails >= 3 ? 900 : 0;
+        var warn = "비밀번호가 맞지 않아요";
+        if (fails >= 5) warn = "비밀번호가 계속 맞지 않아요. 우이에게 물어봐 주세요";
+        if (wait) { go.disabled = true; setTimeout(function(){ go.disabled = false; }, wait); }
+        shake(warn);
+      });
+    }, 40);
+  }
+
+  form.addEventListener("submit", function(e){ e.preventDefault(); unlock(); });
+  pw.addEventListener("input", function(){ if (msg.classList.contains("on")) say(""); });
+  try { pw.focus({ preventScroll: true }); } catch(e) { pw.focus(); }
+})();
+</script>
+</body>
+</html>
