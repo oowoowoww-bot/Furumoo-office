@@ -6,6 +6,11 @@
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#F6F1FE">
 <meta name="robots" content="noindex,nofollow,noarchive">
+<script>
+  /* 이 탭에서 이미 잠금을 풀었다면 잠금 화면을 깜빡이지 않게 미리 숨겨요 */
+  /* sessionStorage = 탭 단위 저장소라 탭을 닫으면 사라집니다 */
+  try { if (sessionStorage.getItem("furumoo-office.unlock.v1")) document.documentElement.classList.add("session-unlock"); } catch (e) {}
+</script>
 <meta name="referrer" content="no-referrer">
 <title>🔒 푸루무스스튜디오 오피스맵</title>
 <!-- 푸루무스스튜디오 오피스맵 · 잠금 페이지 · made by 우이 (tools/lock.mjs 로 생성)
@@ -106,6 +111,20 @@
   .shake input#pw{border-color:#F0A98B;box-shadow:0 0 0 4px rgba(240,140,100,.14)}
   .out{animation:out .34s ease both}
   @keyframes out{to{opacity:0;transform:translateY(-6px) scale(.99)}}
+  /* 탭 세션 자동 잠금 해제 중 — 잠금 카드 대신 잠깐 보여요 */
+  .opening{
+    display:none;position:fixed;inset:0;z-index:2;
+    flex-direction:column;align-items:center;justify-content:center;gap:12px;
+    font-size:13.5px;font-weight:700;color:var(--lilac-deep);letter-spacing:-.01em;
+  }
+  .opening .spin{
+    width:28px;height:28px;border-radius:50%;
+    border:3px solid var(--lilac-soft);border-top-color:var(--lilac);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  html.session-unlock .opening{display:flex}
+  html.session-unlock .card, html.session-unlock footer{visibility:hidden}
   footer{
     position:relative;z-index:1;margin-top:18px;text-align:center;
     font-size:11px;letter-spacing:.04em;color:#B7A492;
@@ -129,10 +148,15 @@
   @media (prefers-reduced-motion:reduce){
     .card{animation:none}
     .shake{animation:none}
+    .opening .spin{animation:none;border-top-color:var(--lilac-soft);border-right-color:var(--lilac)}
   }
 </style>
 </head>
 <body>
+<div class="opening" id="opening" role="status" aria-live="polite">
+  <span class="spin" aria-hidden="true"></span>
+  <span>사무실 문을 다시 열고 있어요…</span>
+</div>
 <div class="wrap">
   <div class="card" id="card">
     <div class="lockicon" aria-hidden="true">🔒</div>
@@ -162,6 +186,9 @@
   var SALT = new Uint8Array([__SALT__]);   // Uint8Array
   var IV   = new Uint8Array([__IV__]);     // Uint8Array (12)
   var ITER = 150000;
+  // 이 탭을 닫기 전까지는 비밀번호를 다시 묻지 않아요 (sessionStorage = 탭 단위, 닫으면 사라져요).
+  // 비밀번호 글자 자체는 저장하지 않고, 비밀번호로 만든 AES 키만 담아 둡니다.
+  var SESSION_KEY = "furumoo-office.unlock.v1";
   var card = document.getElementById("card");
   var form = document.getElementById("form");
   var pw   = document.getElementById("pw");
@@ -175,6 +202,26 @@
     for(var i=0;i<n;i++) a[i] = bin.charCodeAt(i);
     return a;
   }
+  function bytesB64(u8){
+    var bin = "", i;
+    for (i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+    return btoa(bin);
+  }
+  // 탭 세션에 담아 둔 키 — 탭을 닫으면 브라우저가 지워요.
+  function sessionKey(){
+    try {
+      var v = sessionStorage.getItem(SESSION_KEY);
+      if (!v) return null;
+      var raw = b64bytes(v);
+      return raw.length === 32 ? raw : null;
+    } catch (e) { return null; }
+  }
+  function rememberKey(key){
+    return crypto.subtle.exportKey("raw", key).then(function(raw){
+      try { sessionStorage.setItem(SESSION_KEY, bytesB64(new Uint8Array(raw))); } catch (e) {}
+    }).catch(function(){ /* 저장 못 해도 화면은 열어요 */ });
+  }
+  function forgetKey(){ try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {} }
   function say(t, kind){
     msg.textContent = t || "";
     msg.className = "msg" + (t ? " on" : "") + (kind === "busy" ? " busy" : "");
@@ -205,9 +252,59 @@
           { name: "PBKDF2", salt: SALT, iterations: ITER, hash: "SHA-256" },
           base,
           { name: "AES-GCM", length: 256 },
-          false,
+          true,
           ["decrypt"]
         );
+      });
+  }
+
+  // 비밀번호로 만든 키로 화면(index.html 안의 payload)과 최신 데이터(data.enc)를 함께 풀어요.
+  function openWith(key){
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: IV }, key, b64bytes(B64))
+      .then(function(buf){
+        var html = new TextDecoder("utf-8").decode(buf);
+        // 우이가 6시간마다 갱신하는 데이터(data.enc)도 같은 비밀번호로 풀어서 넘겨줘요. 실패하면 화면만 열어요.
+        return fetch("data.enc?t=" + Date.now(), { cache: "no-store" })
+          .then(function(r){ if (!r.ok) throw 0; return r.json(); })
+          .then(function(d){ return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64bytes(d.iv) }, key, b64bytes(d.ct)); })
+          .then(function(db){
+            var json = new TextDecoder("utf-8").decode(db).replace(/</g, "\\u003c");
+            var tag = "<script>window.FURUMOO_DATA=" + json + ";<\/script>";
+            return /<head>/i.test(html) ? html.replace(/<head>/i, function(h){ return h + tag; }) : tag + html;
+          })
+          .catch(function(){ return html; });
+      });
+  }
+
+  function showForm(){
+    document.documentElement.classList.remove("session-unlock");
+    card.classList.remove("out");
+    busy = false; go.disabled = false; go.textContent = "들어가기";
+    try { pw.focus({ preventScroll: true }); } catch (e) { pw.focus(); }
+  }
+
+  function mount(html){
+    try {
+      document.open();
+      document.write(html);
+      document.close();
+    } catch (err) {
+      forgetKey();
+      say("여는 중 문제가 생겼어요. 새로고침 후 다시 시도해 주세요.");
+      showForm();
+    }
+  }
+
+  // 이 탭에서 이미 잠금을 풀었으면 비밀번호를 묻지 않고 바로 열어요. (새로고침·당겨서 새로고침 포함)
+  function autoOpen(raw){
+    busy = true; go.disabled = true;
+    crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, ["decrypt"])
+      .then(function(key){ return openWith(key); })
+      .then(function(html){ mount(html); })
+      .catch(function(){
+        // 탭에 담긴 키가 이 화면의 비밀번호와 맞지 않으면(비밀번호를 바꿨을 때 등) 잊고 잠금 화면으로 돌아가요.
+        forgetKey();
+        showForm();
       });
   }
 
@@ -224,33 +321,16 @@
       var KEY;
       derive(value).then(function(key){
         KEY = key;
-        return crypto.subtle.decrypt({ name: "AES-GCM", iv: IV }, key, b64bytes(B64));
-      }).then(function(buf){
-        var html = new TextDecoder("utf-8").decode(buf);
-        // 우이가 6시간마다 갱신하는 데이터(data.enc)도 같은 비밀번호로 풀어서 넘겨줘요. 실패하면 화면만 열어요.
-        return fetch("data.enc?t=" + Date.now(), { cache: "no-store" })
-          .then(function(r){ if (!r.ok) throw 0; return r.json(); })
-          .then(function(d){ return crypto.subtle.decrypt({ name: "AES-GCM", iv: b64bytes(d.iv) }, KEY, b64bytes(d.ct)); })
-          .then(function(db){
-            var json = new TextDecoder("utf-8").decode(db).replace(/</g, "\\u003c");
-            var tag = "<script>window.FURUMOO_DATA=" + json + ";<\/script>";
-            return /<head>/i.test(html) ? html.replace(/<head>/i, function(h){ return h + tag; }) : tag + html;
-          })
-          .catch(function(){ return html; });
+        return openWith(key);
+      }).then(function(html){
+        // 이 탭을 닫을 때까지 다시 묻지 않도록 키만 담아 둬요. (비밀번호 글자는 저장하지 않아요)
+        return rememberKey(KEY).then(function(){ return html; });
       }).then(function(html){
         say("열렸어요!", "busy");
         card.classList.add("out");
-        setTimeout(function(){
-          try {
-            document.open();
-            document.write(html);
-            document.close();
-          } catch (err) {
-            say("여는 중 문제가 생겼어요. 새로고침 후 다시 시도해 주세요.");
-            busy = false; go.disabled = false; go.textContent = "들어가기";
-          }
-        }, 300);
+        setTimeout(function(){ mount(html); }, 300);
       }).catch(function(){
+        forgetKey();
         fails++;
         busy = false; go.disabled = false; go.textContent = "들어가기";
         pw.select();
@@ -265,7 +345,14 @@
 
   form.addEventListener("submit", function(e){ e.preventDefault(); unlock(); });
   pw.addEventListener("input", function(){ if (msg.classList.contains("on")) say(""); });
-  try { pw.focus({ preventScroll: true }); } catch(e) { pw.focus(); }
+
+  var saved = (window.crypto && crypto.subtle) ? sessionKey() : null;
+  if (saved) {
+    autoOpen(saved);
+  } else {
+    document.documentElement.classList.remove("session-unlock");
+    try { pw.focus({ preventScroll: true }); } catch(e) { pw.focus(); }
+  }
 })();
 </script>
 </body>
