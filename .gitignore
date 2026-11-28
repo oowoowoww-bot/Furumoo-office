@@ -1,3 +1,4 @@
 app.html
 data.json
 *.plain.*
+tools/_*
