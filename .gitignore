@@ -2,3 +2,4 @@ app.html
 data.json
 *.plain.*
 tools/_*
+worker.js
